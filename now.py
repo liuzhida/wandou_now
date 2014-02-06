@@ -10,27 +10,48 @@ from tornado.options import define, options
 import json
 import redis
 
+from jsonphandler import JSONPHandler
+
 c = redis.Redis(host='127.0.0.1', port=6379, db=0)
 
 
 class TestHandler(tornado.web.RequestHandler):
 
     def get(self):
-        shoplist = '<a href="dianping://shopinfo?id=4175436">test</>'
-        return self.finish(shoplist)
+        shoplist = '<h1><a href="dianping://shopinfo?id=4175436">test</></h1>'
+        self.set_header('Access-Control-Allow-Origin', '*')
+        self.finish(shoplist)
+        return
 
 
-class ShopHandler(tornado.web.RequestHandler):
+class ShopHandler(JSONPHandler):
+#class ShopHandler(tornado.web.RequestHandler):
 
     def get(self):
         idlist = c.lrange("shoplist", 0, -1)
         shoplist = list()
-        for id in idlist:
+        for id in idlist[::-1]:
             shop = c.hgetall(id)
             shop['tags'] = eval(shop['tags'])
             shoplist.append(shop)
         shoplist = json.dumps(shoplist)
-        return self.finish(shoplist)
+        self.finish(shoplist)
+        return
+
+
+#class MovieHandler(JSONPHandler):
+class MovieHandler(tornado.web.RequestHandler):
+
+    def get(self):
+        idlist = c.lrange("movielist", 0, -1)
+        #self.finish(json.dumps(idlist))
+        shoplist = list()
+        for id in idlist[::-1]:
+            shop = c.hgetall(id)
+            shoplist.append(shop)
+        shoplist = json.dumps(shoplist)
+        self.finish(shoplist)
+        return
 
 
 def main():
@@ -41,6 +62,7 @@ def main():
     tornado.options.parse_command_line()
     application = tornado.web.Application([
         (r"/shop", ShopHandler),
+        (r"/movie", MovieHandler),
         (r"/test", TestHandler),
 
     ], **settings)
